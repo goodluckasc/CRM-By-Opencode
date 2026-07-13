@@ -44,7 +44,7 @@ export default function Register() {
             <Car className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Create Account</h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">Register for Good Luck Service Center</p>
+          <p className="text-gray-500 dark:text-gray-400 mt-1">Register for Sajol Automobiles</p>
         </div>
 
         {!firebaseReady && (
