@@ -1,0 +1,1 @@
+import{t as e}from"./vendor-DOoNRxl5.js";var t=e();function n({size:e=`md`}){return(0,t.jsx)(`div`,{className:`flex items-center justify-center p-8`,children:(0,t.jsx)(`div`,{className:`${{sm:`w-4 h-4`,md:`w-8 h-8`,lg:`w-12 h-12`}[e]} border-4 border-gray-200 dark:border-gray-700 border-t-blue-600 rounded-full animate-spin`})})}export{n as t};
