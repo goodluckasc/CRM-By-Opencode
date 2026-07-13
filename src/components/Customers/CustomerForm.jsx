@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Timestamp } from 'firebase/firestore'
 import { SERVICE_TYPES, LOCATIONS, MODELS } from '../../utils/constants'
 
 export default function CustomerForm({ onSubmit, onClose, initialData }) {
@@ -22,6 +21,7 @@ export default function CustomerForm({ onSubmit, onClose, initialData }) {
     e.preventDefault()
     setLoading(true)
     try {
+      const { Timestamp } = await import('firebase/firestore')
       const data = {
         ...form,
         lastServiceDate: Timestamp.fromDate(new Date(form.lastServiceDate)),

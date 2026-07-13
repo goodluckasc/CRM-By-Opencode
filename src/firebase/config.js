@@ -20,15 +20,16 @@ let app = null
 let auth = null
 let db = null
 
-if (hasConfig) {
-  const { initializeApp } = await import('firebase/app')
-  const { getAuth } = await import('firebase/auth')
-  const { getFirestore } = await import('firebase/firestore')
+const firebaseReady = hasConfig
+  ? (async () => {
+      const { initializeApp } = await import('firebase/app')
+      const { getAuth } = await import('firebase/auth')
+      const { getFirestore } = await import('firebase/firestore')
+      app = initializeApp(firebaseConfig)
+      auth = getAuth(app)
+      db = getFirestore(app)
+    })()
+  : Promise.resolve()
 
-  app = initializeApp(firebaseConfig)
-  auth = getAuth(app)
-  db = getFirestore(app)
-}
-
-export { app, auth, db }
+export { app, auth, db, firebaseReady }
 export const isFirebaseReady = hasConfig
