@@ -3,7 +3,7 @@ import { Plus, Upload, Edit, Trash2, Phone as PhoneIcon, MessageCircle, ChevronD
 import { getAllCustomers, getAllCalls, deleteCustomer, updateCustomer, addOrUpdateCustomer, addAuditLog } from '../../firebase/services'
 import { useAuth } from '../../contexts/AuthContext'
 import { formatDate, getDaysSince, isOverdue } from '../../utils/helpers'
-import { WHATSAPP_MESSAGE } from '../../utils/constants'
+import { getWhatsAppMessage } from '../../utils/constants'
 import SearchBar from '../Common/SearchBar'
 import LoadingSpinner from '../Common/LoadingSpinner'
 import ExportButton from '../Common/ExportButton'
@@ -31,10 +31,6 @@ export default function CustomerList() {
   const [expandedId, setExpandedId] = useState(null)
   const [callHistory, setCallHistory] = useState({})
 
-  useEffect(() => {
-    loadCustomers()
-  }, [loadCustomers])
-
   const loadCustomers = useCallback(async () => {
     try {
       const [custData, callData] = await Promise.all([getAllCustomers(), getAllCalls()])
@@ -45,6 +41,10 @@ export default function CustomerList() {
     }
     setLoading(false)
   }, [])
+
+  useEffect(() => {
+    loadCustomers()
+  }, [loadCustomers])
 
   const handleAdd = useCallback(async (data) => {
     const result = await addOrUpdateCustomer(data)
@@ -121,7 +121,17 @@ export default function CustomerList() {
     return map
   }, [calls])
 
-  const exportColumns = ['serviceType', 'dcNumber', 'vehicleNumber', 'model', 'customerName', 'location', 'mobileNumber', 'lastServiceDate', 'totalVisits']
+  const exportColumns = [
+    { key: 'serviceType', label: 'Service Type' },
+    { key: 'dcNumber', label: 'DC No' },
+    { key: 'vehicleNumber', label: 'Vehicle No' },
+    { key: 'model', label: 'Model No' },
+    { key: 'customerName', label: 'Customer Name' },
+    { key: 'location', label: 'Location' },
+    { key: 'mobileNumber', label: 'Mobile No' },
+    { key: 'lastServiceDate', label: 'Last Attend' },
+    { key: 'totalVisits', label: 'Visit' },
+  ]
 
   if (loading) return <LoadingSpinner size="lg" />
 
@@ -280,7 +290,7 @@ export default function CustomerList() {
                               <PhoneIcon className="w-4 h-4" />
                             </a>
                             <a
-                              href={`https://wa.me/${customer.mobileNumber}?text=${WHATSAPP_MESSAGE}`}
+                              href={`https://wa.me/${customer.mobileNumber}?text=${getWhatsAppMessage()}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="p-2 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 text-green-600"

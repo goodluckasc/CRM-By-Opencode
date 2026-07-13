@@ -14,6 +14,8 @@ const services = {
   callsRef: null,
   usersRef: null,
   auditLogRef: null,
+  jobCardsRef: null,
+  inventoryRef: null,
   addCustomer: noopSingle,
   updateCustomer: noopSingle,
   deleteCustomer: noopSingle,
@@ -31,19 +33,32 @@ const services = {
   getUsers: noop,
   getUserByEmail: noopSingle,
   updateUser: noopSingle,
+  addUser: noopSingle,
+  deleteUser: noopSingle,
+  getJobCard: noopSingle,
+  getAllJobCards: noop,
+  addJobCard: noopSingle,
+  updateJobCard: noopSingle,
+  deleteJobCard: noopSingle,
+  getJobCardNumber: noopSingle,
+  getAllInventory: noop,
+  addInventory: noopSingle,
+  updateInventory: noopSingle,
+  deleteInventory: noopSingle,
 }
 
 let initialized = false
 
 async function init() {
   if (initialized) return
-  if (!isFirebaseReady || !db) return
-
+  if (!isFirebaseReady) return
   await firebaseReady
+  if (!db) return
 
   const {
     collection,
     addDoc,
+    setDoc,
     updateDoc,
     deleteDoc,
     doc,
@@ -61,11 +76,15 @@ async function init() {
   const callsRef = collection(db, 'calls')
   const usersRef = collection(db, 'users')
   const auditLogRef = collection(db, 'auditLog')
+  const jobCardsRef = collection(db, 'jobCards')
+  const inventoryRef = collection(db, 'inventory')
 
   services.customersRef = customersRef
   services.callsRef = callsRef
   services.usersRef = usersRef
   services.auditLogRef = auditLogRef
+  services.jobCardsRef = jobCardsRef
+  services.inventoryRef = inventoryRef
 
   services.addCustomer = (data) =>
     addDoc(customersRef, {
@@ -170,6 +189,62 @@ async function init() {
   services.updateUser = (id, data) =>
     updateDoc(doc(db, 'users', id), data)
 
+  services.addUser = (data) => {
+    const { uid, ...rest } = data
+    const userData = { ...rest, isActive: true, createdAt: Timestamp.now() }
+    if (uid) return setDoc(doc(db, 'users', uid), userData)
+    return addDoc(usersRef, userData)
+  }
+
+  services.deleteUser = (id) =>
+    deleteDoc(doc(db, 'users', id))
+
+  services.getJobCard = async (id) => {
+    const snap = await getDoc(doc(db, 'jobCards', id))
+    return snap.exists() ? { id: snap.id, ...snap.data() } : null
+  }
+
+  services.getAllJobCards = async () => {
+    const snapshot = await getDocs(query(jobCardsRef, orderBy('createdAt', 'desc')))
+    return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }))
+  }
+
+  services.addJobCard = (data) =>
+    addDoc(jobCardsRef, { ...data, createdAt: Timestamp.now(), updatedAt: Timestamp.now() })
+
+  services.updateJobCard = (id, data) =>
+    updateDoc(doc(db, 'jobCards', id), { ...data, updatedAt: Timestamp.now() })
+
+  services.deleteJobCard = (id) =>
+    deleteDoc(doc(db, 'jobCards', id))
+
+  services.getJobCardNumber = async () => {
+    const year = new Date().getFullYear()
+    const q = query(jobCardsRef, orderBy('createdAt', 'desc'), limit(1))
+    const snap = await getDocs(q)
+    let next = 1
+    if (!snap.empty) {
+      const last = snap.docs[0].data().jobCardNumber || ''
+      const num = parseInt(last.split('-')[1], 10)
+      if (!isNaN(num)) next = num + 1
+    }
+    return `JC-${String(next).padStart(4, '0')}-${year}`
+  }
+
+  services.getAllInventory = async () => {
+    const snapshot = await getDocs(query(inventoryRef, orderBy('createdAt', 'desc')))
+    return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }))
+  }
+
+  services.addInventory = (data) =>
+    addDoc(inventoryRef, { ...data, createdAt: Timestamp.now(), updatedAt: Timestamp.now() })
+
+  services.updateInventory = (id, data) =>
+    updateDoc(doc(db, 'inventory', id), { ...data, updatedAt: Timestamp.now() })
+
+  services.deleteInventory = (id) =>
+    deleteDoc(doc(db, 'inventory', id))
+
   initialized = true
 }
 
@@ -187,6 +262,8 @@ export const {
   callsRef,
   usersRef,
   auditLogRef,
+  jobCardsRef,
+  inventoryRef,
   addCustomer,
   updateCustomer,
   deleteCustomer,
@@ -204,11 +281,25 @@ export const {
   getUsers,
   getUserByEmail,
   updateUser,
+  addUser,
+  deleteUser,
+  getJobCard,
+  getAllJobCards,
+  addJobCard,
+  updateJobCard,
+  deleteJobCard,
+  getJobCardNumber,
+  getAllInventory,
+  addInventory,
+  updateInventory,
+  deleteInventory,
 } = {
   get customersRef() { return services.customersRef },
   get callsRef() { return services.callsRef },
   get usersRef() { return services.usersRef },
   get auditLogRef() { return services.auditLogRef },
+  get jobCardsRef() { return services.jobCardsRef },
+  get inventoryRef() { return services.inventoryRef },
   addCustomer: wrap((...args) => services.addCustomer(...args)),
   updateCustomer: wrap((...args) => services.updateCustomer(...args)),
   deleteCustomer: wrap((...args) => services.deleteCustomer(...args)),
@@ -226,4 +317,16 @@ export const {
   getUsers: wrap((...args) => services.getUsers(...args)),
   getUserByEmail: wrap((...args) => services.getUserByEmail(...args)),
   updateUser: wrap((...args) => services.updateUser(...args)),
+  addUser: wrap((...args) => services.addUser(...args)),
+  deleteUser: wrap((...args) => services.deleteUser(...args)),
+  getJobCard: wrap((...args) => services.getJobCard(...args)),
+  getAllJobCards: wrap((...args) => services.getAllJobCards(...args)),
+  addJobCard: wrap((...args) => services.addJobCard(...args)),
+  updateJobCard: wrap((...args) => services.updateJobCard(...args)),
+  deleteJobCard: wrap((...args) => services.deleteJobCard(...args)),
+  getJobCardNumber: wrap((...args) => services.getJobCardNumber(...args)),
+  getAllInventory: wrap((...args) => services.getAllInventory(...args)),
+  addInventory: wrap((...args) => services.addInventory(...args)),
+  updateInventory: wrap((...args) => services.updateInventory(...args)),
+  deleteInventory: wrap((...args) => services.deleteInventory(...args)),
 }

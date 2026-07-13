@@ -89,7 +89,14 @@ export default function ReportsContent() {
           <ExportButton
             data={customers}
             filename="daily_call_report"
-            columns={['customerName', 'mobileNumber', 'vehicleNumber', 'model', 'location', 'serviceType']}
+            columns={[
+              { key: 'customerName', label: 'Customer Name' },
+              { key: 'mobileNumber', label: 'Mobile No' },
+              { key: 'vehicleNumber', label: 'Vehicle No' },
+              { key: 'model', label: 'Model No' },
+              { key: 'location', label: 'Location' },
+              { key: 'serviceType', label: 'Service Type' },
+            ]}
           />
         </div>
       </div>

@@ -55,7 +55,7 @@ const hoverShadows = {
   indigo: 'hover:shadow-indigo-500/10',
 }
 
-export default function SummaryCard({ title, value, icon: Icon, color = 'blue', subtitle, trend }) {
+export default function SummaryCard({ title, value, icon: Icon, color = 'blue', subtitle, trend, prefix = '' }) {
   const [displayValue, setDisplayValue] = useState(0)
   const ref = useRef(null)
   const hasAnimated = useRef(false)
@@ -104,7 +104,8 @@ export default function SummaryCard({ title, value, icon: Icon, color = 'blue', 
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">{title}</p>
           <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1.5 tabular-nums tracking-tight">
-            {displayValue}
+            {prefix && <span className="text-lg font-medium text-gray-500 dark:text-gray-400 mr-1">{prefix}</span>}
+            {displayValue.toLocaleString()}
           </p>
           {subtitle && (
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 truncate">{subtitle}</p>

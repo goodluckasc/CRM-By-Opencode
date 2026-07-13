@@ -3,6 +3,8 @@ import {
   LayoutDashboard,
   Users,
   PhoneCall,
+  ClipboardList,
+  Package,
   BarChart3,
   Settings,
   LogOut,
@@ -16,6 +18,8 @@ const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/customers', icon: Users, label: 'Customers' },
   { to: '/call-list', icon: PhoneCall, label: "Today's Call List" },
+  { to: '/job-cards', icon: ClipboardList, label: 'Job Cards' },
+  { to: '/inventory', icon: Package, label: 'Inventory' },
   { to: '/reports', icon: BarChart3, label: 'Reports' },
 ]
 

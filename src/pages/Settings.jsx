@@ -1,15 +1,14 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTheme } from '../contexts/ThemeContext'
 import { useAuth } from '../contexts/AuthContext'
 import { Sun, Bell, Shield, Save, MessageCircle } from 'lucide-react'
+import { DEFAULT_WHATSAPP_MESSAGE } from '../utils/constants'
 
 export default function Settings() {
   const { darkMode, setDarkMode } = useTheme()
   const { userData } = useAuth()
-  const [reminderDays, setReminderDays] = useState(30)
-  const [whatsappMessage, setWhatsappMessage] = useState(
-    'Assalamu Alaikum. This is a reminder from Good Luck Service Center. Your vehicle is now due for its scheduled service. Please contact us to book your service appointment. Thank you.'
-  )
+  const [reminderDays, setReminderDays] = useState(() => Number(localStorage.getItem('reminderDays')) || 30)
+  const [whatsappMessage, setWhatsappMessage] = useState(() => localStorage.getItem('whatsappMessage') || DEFAULT_WHATSAPP_MESSAGE)
   const [saved, setSaved] = useState(false)
 
   const handleSave = () => {

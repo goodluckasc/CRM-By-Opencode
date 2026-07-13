@@ -11,6 +11,8 @@ const Register = lazy(() => import('./pages/Register'))
 const DashboardContent = lazy(() => import('./components/Dashboard/Dashboard'))
 const CustomerList = lazy(() => import('./components/Customers/CustomerList'))
 const CallListContent = lazy(() => import('./components/CallList/CallList'))
+const JobCardListContent = lazy(() => import('./components/JobCards/JobCardList'))
+const InventoryListContent = lazy(() => import('./components/Inventory/InventoryList'))
 const ReportsContent = lazy(() => import('./components/Reports/Reports'))
 const Users = lazy(() => import('./pages/Users'))
 const Settings = lazy(() => import('./pages/Settings'))
@@ -36,6 +38,8 @@ function App() {
                 <Route path="dashboard" element={<DashboardContent />} />
                 <Route path="customers" element={<CustomerList />} />
                 <Route path="call-list" element={<CallListContent />} />
+                <Route path="job-cards" element={<JobCardListContent />} />
+                <Route path="inventory" element={<InventoryListContent />} />
                 <Route path="reports" element={<ReportsContent />} />
                 <Route
                   path="users"

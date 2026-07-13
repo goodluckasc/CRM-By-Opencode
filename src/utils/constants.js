@@ -74,6 +74,10 @@ export const FOLLOW_UP_RULES = {
 
 export const REMINDER_INTERVAL_DAYS = 30
 
-export const WHATSAPP_MESSAGE = encodeURIComponent(
-  'Assalamu Alaikum. This is a reminder from Good Luck Service Center. Your vehicle is now due for its scheduled service. Please contact us to book your service appointment. Thank you.'
-)
+export const DEFAULT_WHATSAPP_MESSAGE =
+  'আসসালামু আলাইকুম।\nগুড লাক সার্ভিস সেন্টার থেকে জানানো যাচ্ছে যে, আপনার গাড়ির নির্ধারিত সার্ভিসের সময় হয়ে গেছে। অনুগ্রহ করে দ্রুত আপনার সার্ভিস অ্যাপয়েন্টমেন্ট বুক করতে আমাদের সাথে যোগাযোগ করুন।\nধন্যবাদ।\nগুড লাক সার্ভিস সেন্টার'
+
+export function getWhatsAppMessage() {
+  const saved = localStorage.getItem('whatsappMessage')
+  return encodeURIComponent(saved || DEFAULT_WHATSAPP_MESSAGE)
+}

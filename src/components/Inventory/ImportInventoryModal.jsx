@@ -3,15 +3,16 @@ import { Upload, AlertTriangle, CheckCircle, X, Download } from 'lucide-react'
 import * as XLSX from 'xlsx'
 
 const HEADER_ALIASES = {
-  customerName: ['customer name', 'name', 'customer_name', 'client name', 'client', 'customername'],
-  mobileNumber: ['mobile number', 'mobile', 'phone', 'phone number', 'contact', 'mobile_no', 'contact number', 'mobile no', 'mobilenumber'],
-  vehicleNumber: ['vehicle number', 'vehicle', 'vehicle_no', 'reg number', 'registration', 'plate number', 'vehicle no', 'vehiclenumber'],
-  model: ['model', 'vehicle model', 'car model', 'model no', 'model_no'],
-  dcNumber: ['dc number', 'dc', 'dc_no', 'job card', 'dc no', 'dcnumber'],
-  serviceType: ['service type', 'service', 'service_type', 'type of service', 'servicetype'],
-  lastServiceDate: ['last service date', 'service date', 'date', 'last_service_date', 'service_date', 'last attend', 'last_attend', 'lastservicedate'],
-  location: ['location', 'city', 'area', 'branch'],
-  totalVisits: ['visit', 'visits', 'total visits', 'total_visits', 'totalvisits'],
+  itemCode: ['item code', 'code', 'item_code', 'product code', 'product_code', 'sku', 'itemcode'],
+  name: ['item name', 'name', 'product name', 'product', 'item', 'itemname', 'productname'],
+  category: ['category', 'catagory', 'type'],
+  quantity: ['quantity', 'qty', 'stock', 'qnty', 'available'],
+  unit: ['unit', 'uom', 'measurement', 'measure'],
+  buyingPrice: ['buying price', 'buy price', 'purchase price', 'cost price', 'buying_price', 'purchase', 'buyprice', 'purchaseprice'],
+  sellingPrice: ['selling price', 'sell price', 'sales price', 'price', 'selling_price', 'sellprice', 'salesprice'],
+  reorderLevel: ['reorder level', 'reorder', 'min stock', 'reorder_level', 'minimum', 'reorderlevel'],
+  binLocation: ['bin location', 'bin', 'location', 'rack', 'shelf', 'bin_location', 'binlocation'],
+  supplier: ['supplier', 'vendor', 'supplier name', 'supplier_name'],
 }
 
 function normalizeHeader(header) {
@@ -24,15 +25,16 @@ function normalizeHeader(header) {
 
 const SAMPLE_DATA = [
   {
-    customerName: 'Md. Rahim Uddin',
-    mobileNumber: '01712345678',
-    vehicleNumber: 'Dhaka Metro-Ga 12-3456',
-    chassisNumber: 'JTDBE30K123456789',
-    model: 'Toyota Allion',
-    dcNumber: 'DC-2024-001',
-    serviceType: 'Regular Service',
-    lastServiceDate: '2024-01-15',
-    location: 'Dhaka',
+    itemCode: 'OIL-001',
+    name: 'Engine Oil 5W-30',
+    category: 'Engine Oil',
+    quantity: 50,
+    unit: 'Ltr',
+    buyingPrice: 350,
+    sellingPrice: 500,
+    reorderLevel: 10,
+    binLocation: 'A1-Shelf-3',
+    supplier: 'Mobil BD Ltd.',
   },
 ]
 
@@ -40,24 +42,10 @@ function downloadSample() {
   const ws = XLSX.utils.json_to_sheet(SAMPLE_DATA)
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, ws, 'Sample')
-  XLSX.writeFile(wb, 'customer-import-sample.xlsx')
+  XLSX.writeFile(wb, 'inventory-import-sample.xlsx')
 }
 
-function parseExcelDate(value) {
-  if (!value) return ''
-  if (typeof value === 'number') {
-    const d = new Date((value - 25569) * 86400 * 1000)
-    return d.toISOString().split('T')[0]
-  }
-  if (typeof value === 'string') {
-    const d = new Date(value)
-    if (!isNaN(d.getTime())) return d.toISOString().split('T')[0]
-    return value
-  }
-  return String(value)
-}
-
-export default function ImportModal({ open, onClose, onImport }) {
+export default function ImportInventoryModal({ open, onClose, onImport }) {
   const [file, setFile] = useState(null)
   const [preview, setPreview] = useState([])
   const [errors, setErrors] = useState([])
@@ -92,7 +80,7 @@ export default function ImportModal({ open, onClose, onImport }) {
         const unmapped = rawHeaders.filter((_, i) => !mappedHeaders[i])
 
         if (unmapped.length === rawHeaders.length) {
-          setErrors(['No recognized columns found. Expected columns: Service Type, DC No, Vehicle No, etc.'])
+          setErrors(['No recognized columns found. Expected columns: Item Code, Item Name, Category, Quantity, etc.'])
           setPreview([])
           return
         }
@@ -101,21 +89,15 @@ export default function ImportModal({ open, onClose, onImport }) {
           const mapped = {}
           for (const raw of rawHeaders) {
             const key = normalizeHeader(raw)
-            if (key) {
-              let val = row[raw]
-              if (key === 'lastServiceDate') val = parseExcelDate(val)
-              mapped[key] = String(val).trim()
-            }
+            if (key) mapped[key] = String(row[raw]).trim()
           }
           const rowErrors = []
-          if (!mapped.customerName) rowErrors.push('Customer Name is required')
-          if (!mapped.mobileNumber) rowErrors.push('Mobile No is required')
-          if (!mapped.vehicleNumber) rowErrors.push('Vehicle No is required')
+          if (!mapped.name) rowErrors.push('Item Name is required')
 
           const isDuplicate = preview.some(
-            (p) => p.data.vehicleNumber === mapped.vehicleNumber || p.data.mobileNumber === mapped.mobileNumber
+            (p) => p.data.itemCode === mapped.itemCode && mapped.itemCode
           )
-          if (isDuplicate) rowErrors.push('Duplicate in file - will update existing row')
+          if (isDuplicate) rowErrors.push('Duplicate Item Code in file')
 
           return { row: idx + 2, data: mapped, errors: rowErrors }
         })
@@ -139,27 +121,29 @@ export default function ImportModal({ open, onClose, onImport }) {
     setImporting(true)
     setProgress(0)
     let added = 0
-    let updated = 0
     let failed = 0
     const CONCURRENCY = 5
 
     for (let i = 0; i < total; i += CONCURRENCY) {
       const batch = valid.slice(i, i + CONCURRENCY)
       const results = await Promise.allSettled(
-        batch.map((row) => onImport(row.data))
+        batch.map((row) => {
+          const data = { ...row.data }
+          data.quantity = Number(data.quantity) || 0
+          data.buyingPrice = Number(data.buyingPrice) || 0
+          data.sellingPrice = Number(data.sellingPrice) || 0
+          data.reorderLevel = Number(data.reorderLevel) || 0
+          return onImport(data)
+        })
       )
       for (const r of results) {
-        if (r.status === 'fulfilled') {
-          if (r.value?.action === 'updated') updated++
-          else added++
-        } else {
-          failed++
-        }
+        if (r.status === 'fulfilled') added++
+        else failed++
       }
       setProgress(Math.min(((i + CONCURRENCY) / total) * 100, 100))
     }
 
-    setResult({ added, updated, failed, total })
+    setResult({ added, failed, total })
     setImporting(false)
   }
 
@@ -184,7 +168,7 @@ export default function ImportModal({ open, onClose, onImport }) {
       <div className="absolute inset-0 bg-black/50" onClick={handleClose} />
       <div className="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Import Customers</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Import Inventory</h2>
           <button onClick={handleClose} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
             <X className="w-5 h-5 text-gray-500" />
           </button>
@@ -206,15 +190,16 @@ export default function ImportModal({ open, onClose, onImport }) {
               </button>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-1 mt-2 text-xs">
-              <span><strong>Service Type</strong></span>
-              <span><strong>DC No</strong></span>
-              <span><strong>Vehicle No</strong> (required)</span>
-              <span><strong>Model No</strong></span>
-              <span><strong>Customer Name</strong> (required)</span>
-              <span><strong>Location</strong></span>
-              <span><strong>Mobile No</strong> (required)</span>
-              <span><strong>Last Attend</strong></span>
-              <span><strong>Visit</strong></span>
+              <span><strong>Item Code</strong></span>
+              <span><strong>Item Name</strong> (required)</span>
+              <span><strong>Category</strong></span>
+              <span><strong>Quantity</strong></span>
+              <span><strong>Unit</strong></span>
+              <span><strong>Buying Price</strong></span>
+              <span><strong>Selling Price</strong></span>
+              <span><strong>Reorder Level</strong></span>
+              <span><strong>Bin Location</strong></span>
+              <span><strong>Supplier</strong></span>
             </div>
           </div>
 
@@ -254,10 +239,10 @@ export default function ImportModal({ open, onClose, onImport }) {
                   <thead>
                     <tr className="bg-gray-50 dark:bg-gray-900/50">
                       <th className="px-2 py-1.5 text-left font-medium text-gray-500">#</th>
-                      <th className="px-2 py-1.5 text-left font-medium text-gray-500">Customer Name</th>
-                      <th className="px-2 py-1.5 text-left font-medium text-gray-500">Mobile No</th>
-                      <th className="px-2 py-1.5 text-left font-medium text-gray-500">Vehicle No</th>
-                      <th className="px-2 py-1.5 text-left font-medium text-gray-500">Model No</th>
+                      <th className="px-2 py-1.5 text-left font-medium text-gray-500">Item Code</th>
+                      <th className="px-2 py-1.5 text-left font-medium text-gray-500">Item Name</th>
+                      <th className="px-2 py-1.5 text-left font-medium text-gray-500">Qty</th>
+                      <th className="px-2 py-1.5 text-left font-medium text-gray-500">Category</th>
                       <th className="px-2 py-1.5 text-left font-medium text-gray-500">Status</th>
                     </tr>
                   </thead>
@@ -265,10 +250,10 @@ export default function ImportModal({ open, onClose, onImport }) {
                     {preview.slice(0, 50).map((row) => (
                       <tr key={row.row} className={row.errors.length > 0 ? 'bg-red-50 dark:bg-red-900/10' : ''}>
                         <td className="px-2 py-1.5 text-gray-500">{row.row}</td>
-                        <td className="px-2 py-1.5 text-gray-900 dark:text-white">{row.data.customerName || '-'}</td>
-                        <td className="px-2 py-1.5 text-gray-600 dark:text-gray-400">{row.data.mobileNumber || '-'}</td>
-                        <td className="px-2 py-1.5 text-gray-600 dark:text-gray-400">{row.data.vehicleNumber || '-'}</td>
-                        <td className="px-2 py-1.5 text-gray-600 dark:text-gray-400">{row.data.model || '-'}</td>
+                        <td className="px-2 py-1.5 text-gray-600 dark:text-gray-400 font-mono">{row.data.itemCode || '-'}</td>
+                        <td className="px-2 py-1.5 text-gray-900 dark:text-white">{row.data.name || '-'}</td>
+                        <td className="px-2 py-1.5 text-gray-600 dark:text-gray-400">{row.data.quantity || '0'}</td>
+                        <td className="px-2 py-1.5 text-gray-600 dark:text-gray-400">{row.data.category || '-'}</td>
                         <td className="px-2 py-1.5">
                           {row.errors.length > 0 ? (
                             <span className="text-red-600 dark:text-red-400" title={row.errors.join('; ')}>
@@ -296,7 +281,7 @@ export default function ImportModal({ open, onClose, onImport }) {
               <CheckCircle className="w-12 h-12 text-green-500 mx-auto" />
               <p className="text-lg font-semibold text-gray-900 dark:text-white">Import Complete</p>
               <p className="text-sm text-gray-500">
-                {result.total} processed ({result.added} added, {result.updated} updated)
+                {result.total} processed ({result.added} added)
                 {result.failed > 0 && `, ${result.failed} failed`}
               </p>
               <button onClick={handleClose} className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
@@ -327,7 +312,7 @@ export default function ImportModal({ open, onClose, onImport }) {
                   <Upload className="w-4 h-4" />
                   {importing
                     ? `Importing... ${Math.round(progress)}%`
-                    : `Import ${preview.filter((r) => r.errors.length === 0).length} Customers`}
+                    : `Import ${preview.filter((r) => r.errors.length === 0).length} Items`}
                 </button>
               </div>
             </div>

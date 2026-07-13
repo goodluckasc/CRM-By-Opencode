@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Car, Phone, Clock, Calendar, CalendarPlus, Headphones, XCircle, CheckCircle, AlertTriangle } from 'lucide-react'
+import { Car, Phone, Clock, Calendar, CalendarPlus, Headphones, XCircle, CheckCircle, AlertTriangle, ClipboardList, DollarSign, TrendingUp } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts'
 import SummaryCard from './SummaryCard'
-import { getAllCustomers, getAllCalls } from '../../firebase/services'
+import { getAllCustomers, getAllCalls, getAllJobCards, getAllInventory } from '../../firebase/services'
 import { isDueToday, isDueTomorrow, isOverdue } from '../../utils/helpers'
 import LoadingSpinner from '../Common/LoadingSpinner'
 
@@ -11,14 +11,20 @@ const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'
 export default function DashboardContent() {
   const [customers, setCustomers] = useState([])
   const [calls, setCalls] = useState([])
+  const [jobCards, setJobCards] = useState([])
+  const [inventory, setInventory] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [custData, callData] = await Promise.all([getAllCustomers(), getAllCalls()])
+        const [custData, callData, jobData, invData] = await Promise.all([
+          getAllCustomers(), getAllCalls(), getAllJobCards(), getAllInventory()
+        ])
         setCustomers(custData)
         setCalls(callData)
+        setJobCards(jobData)
+        setInventory(invData)
       } catch (err) {
         console.error('Error loading dashboard data:', err)
       }
@@ -28,6 +34,21 @@ export default function DashboardContent() {
   }, [])
 
   if (loading) return <LoadingSpinner size="lg" />
+
+  const invMap = Object.fromEntries(
+    inventory.map((i) => [i.itemCode, { purchasePrice: Number(i.purchasePrice) || 0, salesPrice: Number(i.salesPrice) || 0 }])
+  )
+
+  const totalJobCards = jobCards.length
+  const totalSales = jobCards.reduce((sum, c) => sum + (Number(c.grandTotal) || 0), 0)
+  const totalProfit = jobCards.reduce((sum, c) => {
+    const partsCost = (c.parts || []).reduce((s, p) => {
+      const inv = invMap[p.itemCode]
+      const cost = inv ? Number(p.quantity) * inv.purchasePrice : 0
+      return s + cost
+    }, 0)
+    return sum + (Number(c.grandTotal) || 0) - partsCost - (Number(c.laborCharge) || 0) - (Number(c.otherCharges) || 0)
+  }, 0)
 
   const totalVehicles = customers.length
   const todayCalls = customers.filter((c) => isDueToday(c.lastServiceDate)).length
@@ -69,6 +90,9 @@ export default function DashboardContent() {
       <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard Overview</h2>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        <SummaryCard title="Total Job Cards" value={totalJobCards} icon={ClipboardList} color="blue" />
+        <SummaryCard title="Total Sales" value={totalSales} prefix="BDT" icon={DollarSign} color="green" />
+        <SummaryCard title="Total Profit" value={totalProfit} prefix="BDT" icon={TrendingUp} color="teal" />
         <SummaryCard title="Total Vehicles" value={totalVehicles} icon={Car} color="blue" />
         <SummaryCard title="Today's Calls" value={todayCalls} icon={Phone} color="green" subtitle="Due for follow-up" />
         <SummaryCard title="Pending Calls" value={pendingCalls} icon={Clock} color="yellow" />

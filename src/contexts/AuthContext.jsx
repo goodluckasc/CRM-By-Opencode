@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import { auth, db, isFirebaseReady } from '../firebase/config'
+import { auth, db, firebaseReady } from '../firebase/config'
 
 const AuthContext = createContext(null)
 
@@ -7,18 +7,20 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [userData, setUserData] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [firebaseReady, setFirebaseReady] = useState(false)
+  const [fbReady, setFbReady] = useState(false)
 
   useEffect(() => {
-    if (!isFirebaseReady || !auth) {
-      setLoading(false)
-      setFirebaseReady(false)
-      return
-    }
-
-    setFirebaseReady(true)
-
     const init = async () => {
+      await firebaseReady
+
+      if (!auth) {
+        setLoading(false)
+        setFbReady(false)
+        return
+      }
+
+      setFbReady(true)
+
       const { onAuthStateChanged } = await import('firebase/auth')
       const { doc, getDoc, setDoc, Timestamp } = await import('firebase/firestore')
 
@@ -85,10 +87,20 @@ export function AuthProvider({ children }) {
     await signOut(auth)
   }
 
+  const createAuthUser = async (email, password) => {
+    const { createUserWithEmailAndPassword } = await import('firebase/auth')
+    return createUserWithEmailAndPassword(auth, email, password)
+  }
+
+  const sendPasswordReset = async (email) => {
+    const { sendPasswordResetEmail } = await import('firebase/auth')
+    return sendPasswordResetEmail(auth, email)
+  }
+
   const isAdmin = userData?.role === 'admin'
 
   return (
-    <AuthContext.Provider value={{ user, userData, loading, login, register, logout, isAdmin, firebaseReady }}>
+    <AuthContext.Provider value={{ user, userData, loading, login, register, logout, isAdmin, firebaseReady: fbReady, createAuthUser, sendPasswordReset }}>
       {children}
     </AuthContext.Provider>
   )

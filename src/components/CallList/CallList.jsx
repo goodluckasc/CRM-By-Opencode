@@ -3,7 +3,7 @@ import { Phone, MessageCircle, CheckCircle, Upload, Edit, Trash2 } from 'lucide-
 import { getAllCustomers, getAllCalls, addCallRecord, updateCallRecord, deleteCustomer, updateCustomer, addOrUpdateCustomer, addAuditLog } from '../../firebase/services'
 import { useAuth } from '../../contexts/AuthContext'
 import { formatDate, getDaysSince, isDueToday, isOverdue } from '../../utils/helpers'
-import { CALL_STATUS_OPTIONS, WHATSAPP_MESSAGE, FOLLOW_UP_RULES } from '../../utils/constants'
+import { CALL_STATUS_OPTIONS, getWhatsAppMessage, FOLLOW_UP_RULES } from '../../utils/constants'
 import CallStatusBadge from './CallStatusBadge'
 import SearchBar from '../Common/SearchBar'
 import LoadingSpinner from '../Common/LoadingSpinner'
@@ -149,7 +149,17 @@ export default function CallListContent() {
     return result
   }
 
-  const exportColumns = ['serviceType', 'dcNumber', 'vehicleNumber', 'model', 'customerName', 'location', 'mobileNumber', 'lastServiceDate', 'totalVisits']
+  const exportColumns = [
+    { key: 'serviceType', label: 'Service Type' },
+    { key: 'dcNumber', label: 'DC No' },
+    { key: 'vehicleNumber', label: 'Vehicle No' },
+    { key: 'model', label: 'Model No' },
+    { key: 'customerName', label: 'Customer Name' },
+    { key: 'location', label: 'Location' },
+    { key: 'mobileNumber', label: 'Mobile No' },
+    { key: 'lastServiceDate', label: 'Last Attend' },
+    { key: 'totalVisits', label: 'Visit' },
+  ]
 
   const openCallModal = (customer) => {
     const latestCall = getLatestCallStatus(customer.id)
@@ -254,7 +264,7 @@ export default function CallListContent() {
                             Update
                           </button>
                           <a
-                            href={`https://wa.me/${customer.mobileNumber}?text=${WHATSAPP_MESSAGE}`}
+                            href={`https://wa.me/${customer.mobileNumber}?text=${getWhatsAppMessage()}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="p-2 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 text-green-600"

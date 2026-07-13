@@ -2,13 +2,25 @@ import { useState } from 'react'
 import { Download } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import jsPDF from 'jspdf'
-import 'jspdf-autotable'
+import { autoTable } from 'jspdf-autotable'
 
 export default function ExportButton({ data, filename = 'export', columns }) {
   const [open, setOpen] = useState(false)
 
+  const keys = columns.map((c) => c.key ?? c)
+  const labels = columns.map((c) => c.label ?? c)
+
   const exportExcel = () => {
-    const ws = XLSX.utils.json_to_sheet(data)
+    const rows = data.map((row, idx) => {
+      const obj = { 'Sl No.': idx + 1 }
+      columns.forEach((col, i) => {
+        const key = keys[i]
+        const label = labels[i]
+        obj[label] = row[key] ?? '-'
+      })
+      return obj
+    })
+    const ws = XLSX.utils.json_to_sheet(rows)
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'Sheet1')
     XLSX.writeFile(wb, `${filename}.xlsx`)
@@ -18,9 +30,9 @@ export default function ExportButton({ data, filename = 'export', columns }) {
   const exportPDF = () => {
     const doc = new jsPDF()
     doc.text(filename, 14, 15)
-    doc.autoTable({
-      head: [columns],
-      body: data.map((row) => columns.map((col) => row[col] || '-')),
+    autoTable(doc, {
+      head: [['Sl No.', ...labels]],
+      body: data.map((row, idx) => [idx + 1, ...keys.map((k) => row[k] ?? '-')]),
       startY: 25,
     })
     doc.save(`${filename}.pdf`)
