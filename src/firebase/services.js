@@ -19,6 +19,8 @@ let services = {
   deleteCustomer: noopSingle,
   getCustomer: noopSingle,
   getAllCustomers: noop,
+  getCustomersCount: noop,
+  getCustomersPage: noopSingle,
   getDueCustomers: noop,
   addCallRecord: noopSingle,
   updateCallRecord: noopSingle,
@@ -43,6 +45,8 @@ if (isFirebaseReady && db) {
     query,
     where,
     orderBy,
+    limit,
+    startAfter,
     Timestamp,
   } = await import('firebase/firestore')
 
@@ -99,6 +103,19 @@ if (isFirebaseReady && db) {
     getAllCustomers: async () => {
       const snapshot = await getDocs(query(customersRef, orderBy('createdAt', 'desc')))
       return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }))
+    },
+
+    getCustomersCount: async () => {
+      const snapshot = await getDocs(query(customersRef, orderBy('createdAt', 'desc')))
+      return snapshot.size
+    },
+
+    getCustomersPage: async (limitCount, lastDoc) => {
+      let q = query(customersRef, orderBy('createdAt', 'desc'), limit(limitCount))
+      if (lastDoc) q = query(q, startAfter(lastDoc))
+      const snapshot = await getDocs(q)
+      const docs = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }))
+      return { data: docs, lastDoc: snapshot.docs[snapshot.docs.length - 1] || null }
     },
 
     getDueCustomers: async () => {
@@ -159,6 +176,8 @@ export const {
   deleteCustomer,
   getCustomer,
   getAllCustomers,
+  getCustomersCount,
+  getCustomersPage,
   getDueCustomers,
   addCallRecord,
   updateCallRecord,

@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import { Plus, Upload, Edit, Trash2, Phone as PhoneIcon, MessageCircle, ChevronDown, ChevronUp } from 'lucide-react'
-import { getAllCustomers, getAllCalls, deleteCustomer, updateCustomer, addOrUpdateCustomer, addAuditLog, getCustomerCalls } from '../../firebase/services'
+import { getAllCustomers, getAllCalls, deleteCustomer, updateCustomer, addOrUpdateCustomer, addAuditLog } from '../../firebase/services'
 import { useAuth } from '../../contexts/AuthContext'
 import { formatDate, getDaysSince, isOverdue } from '../../utils/helpers'
 import { WHATSAPP_MESSAGE } from '../../utils/constants'
@@ -33,9 +33,9 @@ export default function CustomerList() {
 
   useEffect(() => {
     loadCustomers()
-  }, [])
+  }, [loadCustomers])
 
-  const loadCustomers = async () => {
+  const loadCustomers = useCallback(async () => {
     try {
       const [custData, callData] = await Promise.all([getAllCustomers(), getAllCalls()])
       setCustomers(custData)
@@ -44,16 +44,16 @@ export default function CustomerList() {
       console.error(err)
     }
     setLoading(false)
-  }
+  }, [])
 
-  const handleAdd = async (data) => {
+  const handleAdd = useCallback(async (data) => {
     const result = await addOrUpdateCustomer(data)
     await addAuditLog(result.action === 'updated' ? 'update_customer' : 'add_customer', user.uid, { name: data.customerName })
     await loadCustomers()
     return result
-  }
+  }, [loadCustomers, user])
 
-  const handleEdit = async (data) => {
+  const handleEdit = useCallback(async (data) => {
     if (!editCustomer) return
     try {
       await updateCustomer(editCustomer.id, data)
@@ -64,31 +64,32 @@ export default function CustomerList() {
       console.error('Edit failed:', err)
       alert('Failed to update customer. Please try again.')
     }
-  }
+  }, [editCustomer, loadCustomers, user])
 
-  const handleDelete = async (id, name) => {
+  const handleDelete = useCallback(async (id, name) => {
     if (!window.confirm('Are you sure you want to delete this customer?')) return
     await deleteCustomer(id)
     await addAuditLog('delete_customer', user.uid, { name })
     await loadCustomers()
-  }
+  }, [loadCustomers, user])
 
-  const loadCallHistory = async (customerId) => {
+  const loadCallHistory = useCallback(async (customerId) => {
     if (callHistory[customerId]) return
-    const calls = await getCustomerCalls(customerId)
-    setCallHistory((prev) => ({ ...prev, [customerId]: calls }))
-  }
+    const historyCalls = calls.filter((c) => c.customerId === customerId)
+      .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))
+    setCallHistory((prev) => ({ ...prev, [customerId]: historyCalls }))
+  }, [callHistory, calls])
 
-  const toggleExpand = async (id) => {
+  const toggleExpand = useCallback(async (id) => {
     if (expandedId === id) {
       setExpandedId(null)
     } else {
       setExpandedId(id)
       await loadCallHistory(id)
     }
-  }
+  }, [expandedId, loadCallHistory])
 
-  const filtered = customers.filter((c) => {
+  const filtered = useMemo(() => customers.filter((c) => {
     const s = search.toLowerCase()
     const matchesSearch =
       !search ||
@@ -104,10 +105,21 @@ export default function CustomerList() {
     else if (filterDue === 'overdue') matchesDue = isOverdue(c.lastServiceDate)
     else if (filterDue === 'completed') matchesDue = false
     return matchesSearch && matchesLocation && matchesModel && matchesService && matchesDue
-  })
+  }), [customers, search, filterLocation, filterModel, filterService, filterDue])
 
-  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE)
-  const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE)
+  const totalPages = useMemo(() => Math.ceil(filtered.length / ITEMS_PER_PAGE), [filtered])
+  const paginated = useMemo(() => filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE), [filtered, page])
+
+  const latestCallMap = useMemo(() => {
+    const map = {}
+    for (const call of calls) {
+      const cid = call.customerId
+      if (!map[cid] || (call.createdAt?.seconds || 0) > (map[cid].createdAt?.seconds || 0)) {
+        map[cid] = call
+      }
+    }
+    return map
+  }, [calls])
 
   const exportColumns = ['serviceType', 'dcNumber', 'vehicleNumber', 'model', 'customerName', 'location', 'mobileNumber', 'lastServiceDate', 'totalVisits']
 
@@ -213,11 +225,10 @@ export default function CustomerList() {
               ) : (
                 paginated.map((customer, idx) => {
                   const overdue = isOverdue(customer.lastServiceDate)
-                  const latestCall = calls.filter((c) => c.customerId === customer.id).sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))[0]
+                  const latestCall = latestCallMap[customer.id]
                   return (
-                    <>
+                    <Fragment key={customer.id}>
                       <tr
-                        key={customer.id}
                         className={`hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer ${
                           overdue ? 'bg-red-50 dark:bg-red-900/10' : ''
                         }`}
@@ -327,7 +338,7 @@ export default function CustomerList() {
                           </td>
                         </tr>
                       )}
-                    </>
+                    </Fragment>
                   )
                 })
               )}
